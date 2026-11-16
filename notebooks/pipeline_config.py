@@ -26,7 +26,7 @@ RUN_STANDALONE_COLAB_APPENDIX = False
 RUN_STATISTICAL_VALIDATION = ENABLE_IMPROVED_PIPELINE
 
 # ── Improved pipeline capstone (notebook 07) ────────────────────────────────
-RUN_IMPROVED_PIPELINE = ENABLE_IMPROVED_PIPELINE
+RUN_IMPROVED_PIPELINE = False  # Full nested CV/Optuna is expensive; opt in explicitly after review.
 
 # Use full cohort when per-residue embeddings exist; else subsample
 IMPROVED_USE_FULL_COHORT = True

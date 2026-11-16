@@ -1,0 +1,4 @@
+drug_class,n_sequences,n_drugs,mean_length,min_length,max_length
+PI,2086,8,99.0,99,99
+NRTI,1714,6,240.0,240,240
+NNRTI,2066,4,240.0,240,240

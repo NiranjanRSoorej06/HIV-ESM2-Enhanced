@@ -12,12 +12,18 @@ This repository now has one notebook workflow. Run the notebooks in numeric orde
 6. `notebooks/06_explainability_framework.ipynb` - run attention/DRM enrichment, SHAP, Integrated Gradients/proxy aggregation, and Dual SHAP explainability. GPU optional.
 7. `notebooks/07_statistical_validation.ipynb` - run statistical validation, Option B evaluation, and the **improved pipeline capstone** (pooling fusion, ensemble, nested CV, publication tables). GPU recommended.
 
+## Reusing Existing Artifacts
+
+Before running a notebook, check its expected outputs under `data/`, `results/`, and `figures/`. Notebook 01 keeps non-empty processed files, Notebook 02 keeps existing statistics and rare-mutation files, and Notebook 03 validates and reuses pooled/per-residue embeddings. Notebook 03 writes arrays atomically and can rebuild a damaged subset from its valid full-cohort array. Keep retained executed notebook copies in `notebook_outputs/<notebook-name>/`.
+
+The source notebooks may not contain execution outputs even when valid results are already present in the project directories. The execution guide describes what each notebook can produce; it does not claim that every section has just been rerun.
+
 ## Improved Pipeline Chain
 
-The full proposal pipeline is controlled by a single master toggle in `notebooks/pipeline_config.py`:
+Prerequisite sections across notebooks 02–06 follow `ENABLE_IMPROVED_PIPELINE`. Notebook 07's full capstone is a separate explicit opt-in because it runs nested cross-validation and Optuna tuning:
 
 ```python
-ENABLE_IMPROVED_PIPELINE = True   # set False for lightweight / legacy runs
+RUN_IMPROVED_PIPELINE = False  # enable only after approving the compute cost
 ```
 
 When `True`, notebooks 02–07 automatically enable their prerequisite sections:
@@ -29,7 +35,7 @@ When `True`, notebooks 02–07 automatically enable their prerequisite sections:
 | 04 | Rare-mutation-aware attention model training |
 | 05 | Ternary classification, calibration comparison (incl. temperature), extended temporal validation |
 | 06 | SHAP residue mapping |
-| 07 | Option B statistical validation + improved pipeline capstone → `results/improved_pipeline/` |
+| 07 | Reuse Option B statistical outputs; run the improved-pipeline capstone only when explicitly enabled |
 
 You can also run the improved pipeline standalone:
 

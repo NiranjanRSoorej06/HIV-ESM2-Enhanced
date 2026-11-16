@@ -69,7 +69,9 @@ STAGES = [
         outputs=[
             "data/rare_mutations/PI/frequencies.npy",
             "data/rare_mutations/PI/weights.npy",
-            "data/rare_mutations/PI/rare_mutation_summary.csv",
+            "data/rare_mutations/PI/normalized_weights.npy",
+            "data/rare_mutations/PI/masks.npy",
+            "data/rare_mutations/PI/rare_mutation_outputs.pkl",
         ],
     ),
     StageCheck(
@@ -244,6 +246,7 @@ def verify_nb01_parse() -> List[str]:
 
 
 def verify_embedding_shapes() -> List[str]:
+    """Validate embedding headers and file lengths without loading GB arrays."""
     issues = []
     import numpy as np
 
@@ -255,17 +258,38 @@ def verify_embedding_shapes() -> List[str]:
     unified = load_unified_data(processed)
     for dc, data in unified.items():
         n = len(data["sequences"])
-        for pattern in (f"{dc}_pooled_mean.npy", f"{dc}_per_residue.npy", f"{dc}_per_residue_sub_3.npy"):
-            path = emb_dir / pattern
+        candidates = [
+            (emb_dir / f"{dc}_pooled_mean.npy", n, "pooled"),
+            (emb_dir / f"{dc}_pooled_max.npy", n, "pooled"),
+            (emb_dir / f"{dc}_pooled_mean_max.npy", n, "pooled"),
+            (emb_dir / f"{dc}_per_residue.npy", n, "per-residue"),
+            (emb_dir / dc / "per_residue.npy", n, "per-residue"),
+            (emb_dir / f"{dc}_per_residue_sub_250.npy", 250, "subset"),
+        ]
+        for path, expected_rows, kind in candidates:
             if not path.exists():
-                continue
-            arr = np.load(path, allow_pickle=True)
-            if pattern.endswith("pooled_mean.npy"):
-                if arr.shape[0] != n:
-                    issues.append(f"{pattern}: shape[0]={arr.shape[0]} != {n} sequences")
-            else:
-                if len(arr) != n and len(arr) not in (3, 5, 50, 100, 250):
-                    issues.append(f"{pattern}: len={len(arr)} unexpected vs cohort {n}")
+                continue  # Some pooling and subset files are optional.
+            try:
+                with path.open("rb") as stream:
+                    version = np.lib.format.read_magic(stream)
+                    shape, _fortran_order, dtype = np.lib.format._read_array_header(stream, version)
+                    header_end = stream.tell()
+                if not shape or shape[0] != expected_rows:
+                    issues.append(f"{path.relative_to(REPO_ROOT)}: first dimension {shape[:1]} != {expected_rows}")
+                    continue
+                expected_bytes = header_end + int(np.prod(shape)) * dtype.itemsize
+                actual_bytes = path.stat().st_size
+                if dtype.hasobject:
+                    # Pickled object payloads follow the header, so the header-derived
+                    # size is a lower bound. Reading confirms the pickle stream is valid.
+                    np.load(path, allow_pickle=True)
+                    if actual_bytes <= expected_bytes:
+                        issues.append(f"{path.relative_to(REPO_ROOT)}: object payload is truncated")
+                elif actual_bytes != expected_bytes:
+                    state = "truncated" if actual_bytes < expected_bytes else "has unexpected trailing bytes"
+                    issues.append(f"{path.relative_to(REPO_ROOT)}: {state} ({actual_bytes} bytes; expected {expected_bytes})")
+            except Exception as exc:
+                issues.append(f"{path.relative_to(REPO_ROOT)}: unreadable/corrupt array ({exc})")
     return issues
 
 

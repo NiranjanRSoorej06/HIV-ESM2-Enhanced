@@ -89,9 +89,9 @@ Results saved to `results/improved_pipeline/` include per-drug AUC tables and fi
 
 Post-hoc calibration and statistical tests can be run with `src/evaluation.py` and `scripts/verify_pipeline.py`.
 
-### Performance Target vs. Actual Outputs
-- **0.968 Mean AUC Target**: The `0.968` mean AUC referenced in the citation is an optimistic target bound based on earlier non-nested cross-validation runs or non-regularized configurations.
-- **Nested Cross-Validation Baseline**: Under rigorous nested cross-validation (which completely avoids meta-learner leakage and hyperparameter tuning leakage), the pipeline yields a mean test AUC of **~0.9487** on the full cohort, and **~0.9202** on the subset size of 250 (with a stacked ensemble AUC of **~0.9380**). This nested CV protocol represents the scientifically correct and unbiased performance estimate of the model.
+### Existing Results
+
+The repository contains outputs from earlier runs. Treat those files as saved artifacts, not as a fresh reproduction of the figures or headline metrics. Notebook 07's statistical-validation tables are present; the improved-pipeline capstone tables are not. Its full nested-CV/Optuna run is an explicit opt-in because it can be expensive. Run `python scripts/e2e_execution_verify.py` to check the current local artifacts before making result claims.
 
 ## Reproducibility
 

@@ -10,6 +10,7 @@ and publication-level reporting.
 from __future__ import annotations
 
 import warnings
+import pickle
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -1304,6 +1305,8 @@ def run_publication_evaluation(
     fig_dir = improved_dir / 'figures'
     improved_dir.mkdir(parents=True, exist_ok=True)
     fig_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_dir = improved_dir / 'checkpoints'
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     config = config or {}
     drug_rows = []
@@ -1319,7 +1322,7 @@ def run_publication_evaluation(
     hyperparameter_rows = []
     all_results_for_plots = {}
     summary = pd.DataFrame()
-    saved_summary_calibration_curve = False
+    saved_summary_calibration_curve = (fig_dir / 'calibration_curves.png').exists()
 
     for drug_class, data in sub_data.items():
         sequences = data['sequences']
@@ -1332,9 +1335,19 @@ def run_publication_evaluation(
 
         for drug in drugs:
             print(f"\n[Improved Pipeline] {drug_class} / {drug}")
-            res = evaluate_drug_improved(
-                drug, drug_class, per_residue, sequences, renamed, reference, config
-            )
+            checkpoint_path = checkpoint_dir / f'{drug_class}_{drug}.pkl'
+            if checkpoint_path.exists():
+                with checkpoint_path.open('rb') as checkpoint_file:
+                    res = pickle.load(checkpoint_file)
+                print(f"[Improved Pipeline] Loaded saved checkpoint for {drug_class} / {drug}")
+            else:
+                res = evaluate_drug_improved(
+                    drug, drug_class, per_residue, sequences, renamed, reference, config
+                )
+                temp_checkpoint = checkpoint_path.with_suffix('.pkl.tmp')
+                with temp_checkpoint.open('wb') as checkpoint_file:
+                    pickle.dump(res, checkpoint_file, protocol=pickle.HIGHEST_PROTOCOL)
+                temp_checkpoint.replace(checkpoint_path)
             if res.get('skipped'):
                 continue
 

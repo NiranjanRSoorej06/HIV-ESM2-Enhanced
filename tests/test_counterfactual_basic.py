@@ -40,6 +40,7 @@ ref = "MOTOL"
 cf = generate_counterfactual_sequence(original, ref, position=2)
 print(f"  Original: {original}", flush=True)
 print(f"  Counterfactual: {cf}", flush=True)
-print(f"  Expected: MOTOL", flush=True)
+print(f"  Expected: MOLNL", flush=True)
+assert cf == "MOLNL", "Counterfactual substitution failed"
 
 print("\nAll tests passed!", flush=True)

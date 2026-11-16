@@ -8,6 +8,7 @@ are consolidated in models.py; thin aliases are kept here for compatibility.
 from typing import Dict, Optional, Tuple
 
 import numpy as np
+import torch
 import xgboost as xgb
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -84,6 +85,14 @@ def _fit_classifier_improved(
 ):
     """Enhanced classifier fitting with support for XGBoost on ESM features."""
     params = params or {}
+    # Use the available CUDA device for XGBoost, while retaining CPU support
+    # for environments without CUDA. The attention models already select CUDA
+    # through PyTorch when it is available.
+    xgb_device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    if xgb_device == 'cuda':
+        # Release cached attention-model allocations before XGBoost requests
+        # its own histogram workspace on a shared MIG slice.
+        torch.cuda.empty_cache()
 
     if model_type == 'xgboost_esm':
         n_pos = y_train.sum()
@@ -107,6 +116,8 @@ def _fit_classifier_improved(
             eval_metric='auc',
             n_jobs=-1,
             tree_method='hist',
+            device=xgb_device,
+            max_bin=32,
             early_stopping_rounds=20 if X_val is not None and y_val is not None else None,
         )
         if X_val is not None and y_val is not None:
@@ -147,6 +158,9 @@ def _fit_classifier_improved(
             random_state=random_state,
             eval_metric='auc',
             n_jobs=-1,
+            tree_method='hist',
+            device=xgb_device,
+            max_bin=32,
         )
         if X_val is not None and y_val is not None:
             model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
